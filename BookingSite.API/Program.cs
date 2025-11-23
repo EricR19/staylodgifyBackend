@@ -38,17 +38,14 @@ builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<ILogRepository, LogRepository>();
 
 // Add CORS policy for frontend
-var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() 
-    ?? new[] { "http://localhost:3000", "http://localhost:3001", "http://localhost:3002" };
-
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins(allowedOrigins)
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials(); 
+        policy.SetIsOriginAllowed(origin => true) // Allow all origins for now
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 
@@ -118,14 +115,15 @@ builder.Services.AddAuthentication(options =>
 
 var app = builder.Build();
 
+// Use CORS first - BEFORE any other middleware
+app.UseCors("AllowFrontend");
+
 // Configure HTTP pipeline
 app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseStaticFiles();
 
-// Use CORS before controllers
-app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();
