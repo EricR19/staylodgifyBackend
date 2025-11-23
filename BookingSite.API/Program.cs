@@ -37,12 +37,15 @@ builder.Services.AddScoped<IReceiptRepository, ReceiptRepository>();
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<ILogRepository, LogRepository>();
 
-// Add CORS policy for local frontend
+// Add CORS policy for frontend
+var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() 
+    ?? new[] { "http://localhost:3000", "http://localhost:3001", "http://localhost:3002" };
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowLocalhost3000", policy =>
+    options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:3000", "http://localhost:3001", "http://localhost:3002")
+        policy.WithOrigins(allowedOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials(); 
@@ -116,18 +119,25 @@ builder.Services.AddAuthentication(options =>
 var app = builder.Build();
 
 // Configure HTTP pipeline
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
+
 app.UseStaticFiles();
 
 // Use CORS before controllers
-app.UseCors("AllowLocalhost3000");
+app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Health check endpoint
+app.MapGet("/", () => new { 
+    status = "OK", 
+    service = "StayLodgify API",
+    version = "1.0.0",
+    environment = app.Environment.EnvironmentName
+});
+
 app.Run();
