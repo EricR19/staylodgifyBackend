@@ -6,13 +6,14 @@
     }
   },
   "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost;Port=3306;Database=staylodgify;User=root;Password=yourpassword;"
+    "DefaultConnection": "Server=localhost;Port=3306;Database=yourdb;User=youruser;Password=yourpassword;"
   },
   "AllowedHosts": "*",
   "Jwt": {
-    "Key": "ThisIsASecretKeyWith32Characters",
+    "Key": "REPLACE_WITH_YOUR_SECRET_KEY_MIN_32_CHARS",
     "Issuer": "YourApp",
     "Audience": "YourAppUsers",
     "ExpiresInMinutes": 60
   }
 }
+
