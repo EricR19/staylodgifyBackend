@@ -173,7 +173,15 @@ dotnet restore
 
 3. **Configurar la base de datos**
 
-Crea el archivo `appsettings.json` en `BookingSite.API/`:
+⚠️ **IMPORTANTE**: El archivo `appsettings.json` contiene información sensible y NO está incluido en el repositorio por seguridad.
+
+Copia el archivo de ejemplo y configúralo:
+
+```bash
+cp BookingSite.API/appsettings.json.example BookingSite.API/appsettings.json
+```
+
+Luego edita `BookingSite.API/appsettings.json` con tus configuraciones:
 
 ```json
 {
@@ -181,9 +189,10 @@ Crea el archivo `appsettings.json` en `BookingSite.API/`:
     "DefaultConnection": "Server=localhost;Database=bookingsite;User=root;Password=tu_password;"
   },
   "Jwt": {
-    "Key": "tu_clave_secreta_super_segura_de_al_menos_32_caracteres",
+    "Key": "GENERA_UNA_CLAVE_ALEATORIA_DE_AL_MENOS_32_CARACTERES",
     "Issuer": "BookingSiteAPI",
-    "Audience": "BookingSiteClient"
+    "Audience": "BookingSiteClient",
+    "ExpiresInMinutes": 60
   },
   "Logging": {
     "LogLevel": {
@@ -194,6 +203,12 @@ Crea el archivo `appsettings.json` en `BookingSite.API/`:
   "AllowedHosts": "*"
 }
 ```
+
+**🔐 Notas de seguridad:**
+- NUNCA compartas tu `appsettings.json` en repositorios públicos
+- Genera una clave JWT única y segura (mínimo 32 caracteres)
+- Cambia las credenciales de base de datos en producción
+- En producción, usa variables de entorno en lugar de archivos de configuración
 
 4. **Aplicar migraciones** (si existen)
 ```bash
