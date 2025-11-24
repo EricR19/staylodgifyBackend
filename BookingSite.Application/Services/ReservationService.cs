@@ -353,8 +353,21 @@ namespace BookingSite.Application.Services
             if (reservation == null)
                 return false;
 
+            // Release availability for all dates in the reservation
+            var currentDate = reservation.Start_Date.Date;
+            while (currentDate <= reservation.End_Date.Date)
+            {
+                var availability = await _availabilityRepository.GetByRoomIdAndDateAsync(reservation.Room_Id, currentDate);
+                if (availability != null)
+                {
+                    // Mark as available again or delete the record
+                    availability.is_available = true;
+                    await _availabilityRepository.UpdateAsync(availability);
+                }
+                currentDate = currentDate.AddDays(1);
+            }
+
             await _reservationRepository.DeleteAsync(id);
-            // Optionally, release availability if needed
 
             return true;
         }
