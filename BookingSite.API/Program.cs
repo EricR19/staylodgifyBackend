@@ -115,15 +115,34 @@ builder.Services.AddAuthentication(options =>
 
 var app = builder.Build();
 
-// Use CORS first - BEFORE any other middleware
-app.UseCors("AllowFrontend");
-
 // Configure HTTP pipeline
 app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseStaticFiles();
 
+// CORS must run after UseRouting() and before UseAuthentication()
+app.UseRouting();
+app.UseCors("AllowFrontend");
+
+// Add global exception handler to ensure CORS headers are sent even on errors
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next();
+    }
+    catch (Exception ex)
+    {
+        context.Response.StatusCode = 500;
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsJsonAsync(new { 
+            error = "Internal server error",
+            message = ex.Message,
+            timestamp = DateTime.UtcNow
+        });
+    }
+});
 
 app.UseAuthentication();
 app.UseAuthorization();

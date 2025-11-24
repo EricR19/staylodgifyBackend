@@ -30,12 +30,19 @@ public class ReservationsController : ControllerBase
     [Authorize] // JWT público o privado
     public async Task<ActionResult<ReservationCreateDto>> PostReservation([FromBody] ReservationCreateRequestDto dto)
     {
-        var tenantId = GetTenantId();
-        if (tenantId == null)
-            return Unauthorized();
+        try
+        {
+            var tenantId = GetTenantId();
+            if (tenantId == null)
+                return Unauthorized(new { error = "Tenant ID not found in token" });
 
-        var result = await _reservationService.CreateAsync(dto, tenantId.Value);
-        return CreatedAtAction(nameof(GetReservation), new { id = result.Id }, result);
+            var result = await _reservationService.CreateAsync(dto, tenantId.Value);
+            return CreatedAtAction(nameof(GetReservation), new { id = result.Id }, result);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = "Failed to create reservation", message = ex.Message });
+        }
     }
 
     // Endpoint para obtener fechas bloqueadas de un cuarto
@@ -61,14 +68,21 @@ public class ReservationsController : ControllerBase
     [Authorize]
     public async Task<ActionResult<ReservationCreateDto>> PostReservationWithProof([FromForm] ReservationWithProofRequestDto dto)
     {
-        var tenantId = GetTenantId();
-        if (tenantId == null)
-            return Unauthorized();
+        try
+        {
+            var tenantId = GetTenantId();
+            if (tenantId == null)
+                return Unauthorized(new { error = "Tenant ID not found in token" });
 
-        var result = await _reservationService.CreateWithProofAsync(dto, tenantId.Value);
-        return CreatedAtAction(nameof(GetReservation), new { id = result.Id }, result);
+            var result = await _reservationService.CreateWithProofAsync(dto, tenantId.Value);
+            return CreatedAtAction(nameof(GetReservation), new { id = result.Id }, result);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = "Failed to create reservation with proof", message = ex.Message });
+        }
     }
-    
+
     // (Opcional) Endpoint para obtener reservación por id
     [HttpGet("{id}")]
     [Authorize]
