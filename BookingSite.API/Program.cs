@@ -49,7 +49,8 @@ var allowedOrigins = new[]
     "https://www.staylodgify.com",
     "https://staylodgify.com",
     "https://www.staylodgify.lat",
-    "https://staylodgify.lat"
+    "https://staylodgify.lat",
+    "https://staylodgify-dashboard.onrender.com"
     // Add your production frontend URLs here
 };
 
