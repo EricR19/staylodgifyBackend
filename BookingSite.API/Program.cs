@@ -46,6 +46,8 @@ var allowedOrigins = new[]
     "http://localhost:3001",
     "https://staylodgify.vercel.app",
     "https://staylodgify-frontend.vercel.app",
+    "https://www.staylodgify.com",
+    "https://staylodgify.com"
     // Add your production frontend URLs here
 };
 

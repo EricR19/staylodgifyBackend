@@ -13,3 +13,4 @@
 /Users/ericruiz/RiderProjects/BookingSiteApi/BookingSite.Application/obj/Debug/net8.0/refint/BookingSite.Application.dll
 /Users/ericruiz/RiderProjects/BookingSiteApi/BookingSite.Application/obj/Debug/net8.0/BookingSite.Application.pdb
 /Users/ericruiz/RiderProjects/BookingSiteApi/BookingSite.Application/obj/Debug/net8.0/ref/BookingSite.Application.dll
+/Users/ericruiz/RiderProjects/BookingSiteApi/BookingSite.Application/obj/Debug/net8.0/BookingSite.Application.sourcelink.json

@@ -17,3 +17,4 @@
 /Users/ericruiz/RiderProjects/BookingSiteApi/BookingSite.Infrastructure/obj/Debug/net8.0/BookingSite.Infrastructure.pdb
 /Users/ericruiz/RiderProjects/BookingSiteApi/BookingSite.Infrastructure/obj/Debug/net8.0/BookingSite.Infrastructure.genruntimeconfig.cache
 /Users/ericruiz/RiderProjects/BookingSiteApi/BookingSite.Infrastructure/obj/Debug/net8.0/ref/BookingSite.Infrastructure.dll
+/Users/ericruiz/RiderProjects/BookingSiteApi/BookingSite.Infrastructure/obj/Debug/net8.0/BookingSite.Infrastructure.sourcelink.json
