@@ -33,16 +33,15 @@ namespace BookingSite.Infrastructure.Repositories
         }
 
         // ✅ CRITICAL SECURITY METHOD - Secure multi-tenant authentication
-        // This implements the secure query that prevents cross-tenant access
+        // This includes the tenant for validation in the service layer
         public async Task<User?> GetByEmailWithTenantAsync(string email)
         {
+            // Simplified query - tenant validation done in AuthService
+            // This allows better error messages for expired/inactive tenants
             return await _context.Users
-                .Include(u => u.Tenant) // Include tenant for validation
+                .Include(u => u.Tenant)
                 .AsNoTracking()
-                .FirstOrDefaultAsync(u => u.email == email 
-                    && u.Tenant != null 
-                    && u.Tenant.Status == "active"  // Fixed: Capital 'S' for Status
-                    && (u.Tenant.Subscription_expires_at == null || u.Tenant.Subscription_expires_at >= DateTime.Today));  // Fixed: Capital 'S' and underscore
+                .FirstOrDefaultAsync(u => u.email == email);
         }
     }
 }
