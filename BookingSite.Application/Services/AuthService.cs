@@ -26,18 +26,12 @@ public class AuthService : IAuthService
         
         if (user == null)
         {
-            // Debug: Log that user was not found
-            Console.WriteLine($"[AUTH DEBUG] User not found for email: {loginDto.Email}");
             return new LoginResponseDto
             {
                 Success = false,
                 Error = "Invalid email or password"
             };
         }
-
-        // Debug: Log user found
-        Console.WriteLine($"[AUTH DEBUG] User found: ID={user.Id}, Email={user.email}, TenantID={user.Tenant_id}");
-        Console.WriteLine($"[AUTH DEBUG] Password hash starts with: {user.password_hash?.Substring(0, Math.Min(20, user.password_hash?.Length ?? 0))}...");
 
         // ✅ HANDLE LEGACY PASSWORDS (Migration Support)
         bool passwordValid = false;
@@ -47,11 +41,9 @@ public class AuthService : IAuthService
         {
             // Try BCrypt verification first (for new passwords)
             passwordValid = BCrypt.Net.BCrypt.Verify(loginDto.Password, user.password_hash);
-            Console.WriteLine($"[AUTH DEBUG] BCrypt.Verify result: {passwordValid}");
         }
-        catch (BCrypt.Net.SaltParseException ex)
+        catch (BCrypt.Net.SaltParseException)
         {
-            Console.WriteLine($"[AUTH DEBUG] BCrypt SaltParseException: {ex.Message}");
             // If BCrypt fails, check if it's a plain text password (legacy)
             if (user.password_hash == loginDto.Password)
             {
@@ -59,14 +51,9 @@ public class AuthService : IAuthService
                 needsHashMigration = true;
             }
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[AUTH DEBUG] BCrypt Exception: {ex.GetType().Name}: {ex.Message}");
-        }
 
         if (!passwordValid)
         {
-            Console.WriteLine($"[AUTH DEBUG] Password validation failed for user: {user.email}");
             return new LoginResponseDto
             {
                 Success = false,
@@ -81,13 +68,9 @@ public class AuthService : IAuthService
             await _userRepository.UpdateAsync(user);
         }
 
-        // Debug tenant info
-        Console.WriteLine($"[AUTH DEBUG] Tenant: Name={user.Tenant?.Name}, Status={user.Tenant?.Status}, Expires={user.Tenant?.Subscription_expires_at}");
-
         // ✅ TENANT STATUS VALIDATION - Prevent access to inactive tenants
-        if (user.Tenant?.Status != "active")  // Fixed: Capital 'S'
+        if (user.Tenant?.Status != "active")
         {
-            Console.WriteLine($"[AUTH DEBUG] FAILED: Tenant status is '{user.Tenant?.Status}', expected 'active'");
             return new LoginResponseDto
             {
                 Success = false,
@@ -97,9 +80,8 @@ public class AuthService : IAuthService
 
         // ✅ SUBSCRIPTION VALIDATION - Prevent access to expired tenants
         if (user.Tenant?.Subscription_expires_at.HasValue == true && 
-            user.Tenant.Subscription_expires_at.Value < DateTime.Today)  // Fixed: Capital 'S' and underscore
+            user.Tenant.Subscription_expires_at.Value < DateTime.Today)
         {
-            Console.WriteLine($"[AUTH DEBUG] FAILED: Subscription expired on {user.Tenant.Subscription_expires_at.Value}, today is {DateTime.Today}");
             return new LoginResponseDto
             {
                 Success = false,
@@ -107,7 +89,6 @@ public class AuthService : IAuthService
             };
         }
 
-        Console.WriteLine($"[AUTH DEBUG] All checks passed, generating JWT token...");
 
         // ✅ SECURE JWT TOKEN GENERATION with tenant context
         var tokenHandler = new JwtSecurityTokenHandler();
