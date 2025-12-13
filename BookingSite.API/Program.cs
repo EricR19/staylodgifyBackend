@@ -4,6 +4,7 @@ using BookingSite.Domain.Repositories;
 using BookingSite.Infrastructure.Repositories;
 using BookingSite.API.Controllers;
 using BookingSite.Application.Services;
+using BookingSite.API.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
@@ -37,15 +38,37 @@ builder.Services.AddScoped<IReceiptRepository, ReceiptRepository>();
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<ILogRepository, LogRepository>();
 
-// Add CORS policy for frontend
+// ✅ SECURE CORS Configuration
+// Define allowed origins explicitly for production
+var allowedOrigins = new[]
+{
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "https://staylodgify.vercel.app",
+    "https://staylodgify-frontend.vercel.app",
+    // Add your production frontend URLs here
+};
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.SetIsOriginAllowed(origin => true) // Allow all origins for now
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+        if (builder.Environment.IsDevelopment())
+        {
+            // Development: Allow any origin for testing
+            policy.SetIsOriginAllowed(_ => true)
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        }
+        else
+        {
+            // Production: Explicit origins only
+            policy.WithOrigins(allowedOrigins)
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        }
     });
 });
 
@@ -56,7 +79,8 @@ builder.Services.AddSwaggerGen();
     
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 
-// Add both Cookie and JWT Bearer authentication
+// ✅ SECURE Authentication Configuration
+// Supports both Bearer token (for mobile/API) and HttpOnly Cookie (for web)
 builder.Services.AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = "MultiScheme";
@@ -72,7 +96,8 @@ builder.Services.AddAuthentication(options =>
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwtSettings["Issuer"],
             ValidAudience = jwtSettings["Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtSettings["Key"]))
+            IssuerSigningKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtSettings["Key"] ?? throw new InvalidOperationException("JWT Key not configured"))),
+            ClockSkew = TimeSpan.Zero // No tolerance for token expiration
         };
     })
     .AddJwtBearer("Cookie", options =>
@@ -81,7 +106,7 @@ builder.Services.AddAuthentication(options =>
         {
             OnMessageReceived = context =>
             {
-                // Extract JWT from cookie instead of Authorization header
+                // ✅ SECURE: Extract JWT from HttpOnly cookie
                 if (context.Request.Cookies.ContainsKey("jwt"))
                 {
                     context.Token = context.Request.Cookies["jwt"];
@@ -97,18 +122,19 @@ builder.Services.AddAuthentication(options =>
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwtSettings["Issuer"],
             ValidAudience = jwtSettings["Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtSettings["Key"]))
+            IssuerSigningKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtSettings["Key"] ?? throw new InvalidOperationException("JWT Key not configured"))),
+            ClockSkew = TimeSpan.Zero
         };
     })
     .AddPolicyScheme("MultiScheme", "Bearer or Cookie", options =>
     {
         options.ForwardDefaultSelector = context =>
         {
-            // If there's a cookie, use cookie authentication
+            // Prefer cookie auth for web clients
             if (context.Request.Cookies.ContainsKey("jwt"))
                 return "Cookie";
             
-            // Otherwise, use Bearer token
+            // Fallback to Bearer for API/mobile clients
             return "Bearer";
         };
     });
@@ -121,11 +147,14 @@ app.UseSwaggerUI();
 
 app.UseStaticFiles();
 
-// CORS must run after UseRouting() and before UseAuthentication()
+// ✅ CRITICAL: Middleware order matters for security!
+// 1. Routing first
 app.UseRouting();
+
+// 2. CORS before Authentication
 app.UseCors("AllowFrontend");
 
-// Add global exception handler to ensure CORS headers are sent even on errors
+// 3. Global exception handler to ensure CORS headers on errors
 app.Use(async (context, next) =>
 {
     try
@@ -136,15 +165,27 @@ app.Use(async (context, next) =>
     {
         context.Response.StatusCode = 500;
         context.Response.ContentType = "application/json";
+        
+        // Don't expose internal errors in production
+        var errorMessage = app.Environment.IsDevelopment() 
+            ? ex.Message 
+            : "An internal error occurred";
+            
         await context.Response.WriteAsJsonAsync(new { 
             error = "Internal server error",
-            message = ex.Message,
+            message = errorMessage,
             timestamp = DateTime.UtcNow
         });
     }
 });
 
+// 4. Authentication
 app.UseAuthentication();
+
+// 5. ✅ SECURE: Tenant validation AFTER authentication
+app.UseTenantValidation();
+
+// 6. Authorization
 app.UseAuthorization();
 
 app.MapControllers();

@@ -86,27 +86,68 @@ namespace BookingSite.API.Controllers
             return Ok(user);
         }
 
-        // POST: api/Users/login
+        /// <summary>
+        /// ✅ SECURE LOGIN - Uses HttpOnly cookies, no token in response
+        /// Kept for backward compatibility - delegates to AuthService
+        /// </summary>
         [HttpPost("login")]
         [AllowAnonymous]
         public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
         {
-            var result = await _authService.LoginAsync(loginDto);
-            if (result == null)
-                return Unauthorized("Invalid credentials");
+            try
+            {
+                var result = await _authService.LoginAsync(loginDto);
+                if (result == null || !result.Success)
+                    return Unauthorized(new { success = false, error = result?.Error ?? "Invalid credentials" });
 
-            // Set JWT as HttpOnly cookie with environment-aware settings
+                // ✅ SECURE: Set JWT as HttpOnly cookie - token NOT exposed to JavaScript
+                var isDevelopment = HttpContext.RequestServices.GetRequiredService<IWebHostEnvironment>().IsDevelopment();
+                
+                Response.Cookies.Append("jwt", result.Token, new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = !isDevelopment,
+                    SameSite = isDevelopment ? SameSiteMode.Lax : SameSiteMode.None,
+                    Expires = DateTimeOffset.UtcNow.AddDays(1),
+                    Path = "/"
+                });
+
+                // ✅ SECURE: Return user info but NOT the token
+                return Ok(new { 
+                    success = true,
+                    user = new { 
+                        id = result.User.Id,
+                        name = result.User.Name, 
+                        email = result.User.Email,
+                        role = result.User.Role,
+                        tenantId = result.User.TenantId
+                    },
+                    tenant = result.Tenant
+                });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new { success = false, error = "Authentication service error" });
+            }
+        }
+
+        /// <summary>
+        /// ✅ SECURE LOGOUT - Clears HttpOnly cookie
+        /// </summary>
+        [HttpPost("logout")]
+        public IActionResult Logout()
+        {
             var isDevelopment = HttpContext.RequestServices.GetRequiredService<IWebHostEnvironment>().IsDevelopment();
             
-            Response.Cookies.Append("jwt", result.Token, new CookieOptions
+            Response.Cookies.Delete("jwt", new CookieOptions
             {
                 HttpOnly = true,
-                Secure = !isDevelopment, // Only secure in production (requires HTTPS)
-                SameSite = isDevelopment ? SameSiteMode.Lax : SameSiteMode.Strict,
-                Expires = DateTimeOffset.UtcNow.AddHours(1)
+                Secure = !isDevelopment,
+                SameSite = isDevelopment ? SameSiteMode.Lax : SameSiteMode.None,
+                Path = "/"
             });
 
-            return Ok(new { UserName = result.User.Name, Email = result.User.Email });
+            return Ok(new { success = true, message = "Logged out successfully" });
         }
 
         // POST: api/Users

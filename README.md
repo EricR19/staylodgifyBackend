@@ -53,17 +53,126 @@ BookingSiteApi/
 
 ## 🔐 Seguridad
 
-### Autenticación
-- **JWT Bearer Tokens** con soporte dual:
-  - Authorization header (Bearer token)
-  - Cookie-based authentication
-- Sistema de refresh tokens
-- Reset de contraseñas con tokens temporales
+### Autenticación con HttpOnly Cookies (Segura)
 
-### Multi-tenant
-- Aislamiento de datos por tenant
-- Validación automática de pertenencia de recursos
-- Control de acceso basado en roles (RBAC)
+El sistema utiliza **HttpOnly Cookies** para autenticación, lo que proporciona las siguientes ventajas:
+
+1. **Protección contra XSS**: Los tokens NO son accesibles desde JavaScript
+2. **Envío automático**: Las cookies se envían automáticamente en cada request
+3. **Control del servidor**: El backend controla completamente la sesión
+
+#### Flujo de Autenticación
+
+```
+┌─────────────┐      POST /api/Auth/login        ┌─────────────┐
+│   Frontend  │ ─────────────────────────────────>│   Backend   │
+│  (Next.js)  │     { email, password }          │   (.NET)    │
+└─────────────┘                                   └─────────────┘
+                                                         │
+                                                         ▼
+                                                 ┌─────────────┐
+                                                 │ Validate    │
+                                                 │ Credentials │
+                                                 └─────────────┘
+                                                         │
+                                                         ▼
+┌─────────────┐      Set-Cookie: jwt=xxx;         ┌─────────────┐
+│   Frontend  │ <─────────────────────────────────│   Backend   │
+│             │      HttpOnly; Secure             │             │
+└─────────────┘      + { user, tenant } JSON      └─────────────┘
+```
+
+#### Cambios requeridos en el Frontend (Next.js)
+
+**ANTES (Inseguro):**
+```typescript
+// ❌ NO HACER ESTO - Token expuesto a XSS
+const response = await fetch('/api/login', { ... });
+const { token } = await response.json();
+localStorage.setItem('token', token); // ❌ VULNERABLE
+
+// ❌ NO HACER ESTO - Header manual
+fetch('/api/data', {
+  headers: { 'Authorization': `Bearer ${token}` }
+});
+```
+
+**DESPUÉS (Seguro):**
+```typescript
+// ✅ CORRECTO - Cookie se maneja automáticamente
+const response = await fetch('https://api.staylodgify.com/api/Auth/login', {
+  method: 'POST',
+  credentials: 'include', // ✅ CRÍTICO: Envía y recibe cookies
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email, password })
+});
+
+const { success, user, tenant } = await response.json();
+// ✅ El token está en la cookie HttpOnly, NO en la respuesta
+
+// ✅ CORRECTO - Requests autenticados automáticamente
+fetch('https://api.staylodgify.com/api/Propierties', {
+  credentials: 'include' // ✅ La cookie se envía automáticamente
+});
+```
+
+### Configuración de Fetch para Next.js
+
+```typescript
+// services/api.ts
+class ApiService {
+  private baseUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  async fetchWithAuth<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      ...options,
+      credentials: 'include', // ✅ SIEMPRE incluir esto
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+
+    if (response.status === 401) {
+      // Redirigir a login
+      window.location.href = '/login';
+      throw new Error('Session expired');
+    }
+
+    return response.json();
+  }
+
+  async login(email: string, password: string) {
+    return this.fetchWithAuth('/api/Auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+  }
+
+  async logout() {
+    return this.fetchWithAuth('/api/Auth/logout', { method: 'POST' });
+  }
+
+  async getCurrentUser() {
+    return this.fetchWithAuth('/api/Auth/me');
+  }
+}
+```
+
+### Multi-tenant Security
+
+- **Aislamiento total de datos** por tenant
+- **Validación en middleware** de cada request autenticado
+- **tenant_id embebido en JWT** - No se puede modificar desde el cliente
+- **Rechazo automático** de intentos de acceso cross-tenant
+
+### Middleware de Validación de Tenant
+
+El sistema incluye un middleware que:
+1. ✅ Valida que el token tenga tenant_id
+2. ✅ Rechaza requests si el tenant está suspendido
+3. ✅ Bloquea intentos de bypass vía query params o headers
+4. ✅ Registra intentos de acceso no autorizados
 
 ## 🎯 Características Principales
 

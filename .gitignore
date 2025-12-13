@@ -374,3 +374,5 @@ appsettings.json
 wwwroot/receipts/*
 !wwwroot/receipts/.gitkeep
 
+# Temporary SQL scripts
+fix_*.sql
