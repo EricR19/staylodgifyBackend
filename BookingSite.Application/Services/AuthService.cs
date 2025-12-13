@@ -26,12 +26,18 @@ public class AuthService : IAuthService
         
         if (user == null)
         {
+            // Debug: Log that user was not found
+            Console.WriteLine($"[AUTH DEBUG] User not found for email: {loginDto.Email}");
             return new LoginResponseDto
             {
                 Success = false,
                 Error = "Invalid email or password"
             };
         }
+
+        // Debug: Log user found
+        Console.WriteLine($"[AUTH DEBUG] User found: ID={user.Id}, Email={user.email}, TenantID={user.Tenant_id}");
+        Console.WriteLine($"[AUTH DEBUG] Password hash starts with: {user.password_hash?.Substring(0, Math.Min(20, user.password_hash?.Length ?? 0))}...");
 
         // ✅ HANDLE LEGACY PASSWORDS (Migration Support)
         bool passwordValid = false;
@@ -41,9 +47,11 @@ public class AuthService : IAuthService
         {
             // Try BCrypt verification first (for new passwords)
             passwordValid = BCrypt.Net.BCrypt.Verify(loginDto.Password, user.password_hash);
+            Console.WriteLine($"[AUTH DEBUG] BCrypt.Verify result: {passwordValid}");
         }
-        catch (BCrypt.Net.SaltParseException)
+        catch (BCrypt.Net.SaltParseException ex)
         {
+            Console.WriteLine($"[AUTH DEBUG] BCrypt SaltParseException: {ex.Message}");
             // If BCrypt fails, check if it's a plain text password (legacy)
             if (user.password_hash == loginDto.Password)
             {
@@ -51,9 +59,14 @@ public class AuthService : IAuthService
                 needsHashMigration = true;
             }
         }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[AUTH DEBUG] BCrypt Exception: {ex.GetType().Name}: {ex.Message}");
+        }
 
         if (!passwordValid)
         {
+            Console.WriteLine($"[AUTH DEBUG] Password validation failed for user: {user.email}");
             return new LoginResponseDto
             {
                 Success = false,
