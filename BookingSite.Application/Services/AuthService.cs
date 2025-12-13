@@ -81,9 +81,13 @@ public class AuthService : IAuthService
             await _userRepository.UpdateAsync(user);
         }
 
+        // Debug tenant info
+        Console.WriteLine($"[AUTH DEBUG] Tenant: Name={user.Tenant?.Name}, Status={user.Tenant?.Status}, Expires={user.Tenant?.Subscription_expires_at}");
+
         // ✅ TENANT STATUS VALIDATION - Prevent access to inactive tenants
         if (user.Tenant?.Status != "active")  // Fixed: Capital 'S'
         {
+            Console.WriteLine($"[AUTH DEBUG] FAILED: Tenant status is '{user.Tenant?.Status}', expected 'active'");
             return new LoginResponseDto
             {
                 Success = false,
@@ -95,12 +99,15 @@ public class AuthService : IAuthService
         if (user.Tenant?.Subscription_expires_at.HasValue == true && 
             user.Tenant.Subscription_expires_at.Value < DateTime.Today)  // Fixed: Capital 'S' and underscore
         {
+            Console.WriteLine($"[AUTH DEBUG] FAILED: Subscription expired on {user.Tenant.Subscription_expires_at.Value}, today is {DateTime.Today}");
             return new LoginResponseDto
             {
                 Success = false,
                 Error = "Your organization's subscription has expired"
             };
         }
+
+        Console.WriteLine($"[AUTH DEBUG] All checks passed, generating JWT token...");
 
         // ✅ SECURE JWT TOKEN GENERATION with tenant context
         var tokenHandler = new JwtSecurityTokenHandler();
