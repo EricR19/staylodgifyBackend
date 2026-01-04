@@ -26,6 +26,8 @@ namespace BookingSite.API.Controllers
             return null;
         }
 
+        // GET: api/Rooms
+        // ✅ PUBLIC: Accessible with public token (Booking Site) or user token (Admin)
         [HttpGet]
         [Authorize]
         public async Task<ActionResult<IEnumerable<RoomDto>>> GetRooms()
@@ -38,6 +40,8 @@ namespace BookingSite.API.Controllers
             return Ok(rooms);
         }
 
+        // GET: api/Rooms/by-property/{propertyId}
+        // ✅ PUBLIC: Accessible with public token (Booking Site) or user token (Admin)
         [HttpGet("by-property/{propertyId}")]
         [Authorize]
         public async Task<ActionResult<IEnumerable<RoomDto>>> GetRoomsByProperty(int propertyId)

@@ -42,16 +42,20 @@ builder.Services.AddScoped<ILogRepository, LogRepository>();
 // Define allowed origins explicitly for production
 var allowedOrigins = new[]
 {
+    // Development
     "http://localhost:3000",
     "http://localhost:3001",
+    // Production - Booking Site (Public)
+    "https://www.staylodgify.lat",
+    "https://staylodgify.lat",
+    // Production - Admin Dashboard (Private)
+    "https://admin.staylodgify.lat",
+    // Legacy/Other deployments
     "https://staylodgify.vercel.app",
     "https://staylodgify-frontend.vercel.app",
     "https://www.staylodgify.com",
     "https://staylodgify.com",
-    "https://www.staylodgify.lat",
-    "https://staylodgify.lat",
     "https://staylodgify-dashboard.onrender.com"
-    // Add your production frontend URLs here
 };
 
 builder.Services.AddCors(options =>

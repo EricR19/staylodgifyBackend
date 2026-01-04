@@ -84,10 +84,15 @@ namespace BookingSite.API.Controllers
         {
             try
             {
+                Console.WriteLine($"[AUTH CONTROLLER] Login request received for: {loginDto.Email}");
+                
                 var result = await _authService.LoginAsync(loginDto);
+                
+                Console.WriteLine($"[AUTH CONTROLLER] AuthService result: Success={result?.Success}, Error={result?.Error}");
                 
                 if (result == null || !result.Success)
                 {
+                    Console.WriteLine($"[AUTH CONTROLLER] Login failed, returning 401");
                     return Unauthorized(new { 
                         success = false, 
                         error = result?.Error ?? "Invalid credentials" 
@@ -95,7 +100,9 @@ namespace BookingSite.API.Controllers
                 }
 
                 // ✅ SECURE: Set HttpOnly cookie - token NEVER exposed to JavaScript
+                Console.WriteLine($"[AUTH CONTROLLER] Setting auth cookie...");
                 SetAuthCookie(result.Token, TimeSpan.FromDays(1));
+                Console.WriteLine($"[AUTH CONTROLLER] Cookie set successfully, returning response");
 
                 // ✅ SECURE: Return user/tenant info but NOT the token
                 return Ok(new SecureLoginResponse
@@ -107,6 +114,8 @@ namespace BookingSite.API.Controllers
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[AUTH CONTROLLER] Exception during login: {ex.Message}");
+                Console.WriteLine($"[AUTH CONTROLLER] Stack trace: {ex.StackTrace}");
                 // Log the exception in production
                 return StatusCode(500, new { 
                     success = false, 

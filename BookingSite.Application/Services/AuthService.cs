@@ -21,17 +21,24 @@ public class AuthService : IAuthService
 
     public async Task<LoginResponseDto> LoginAsync(LoginDto loginDto)
     {
+        Console.WriteLine($"[AUTH DEBUG] Login attempt for: {loginDto.Email}");
+        
         // ✅ SECURE MULTI-TENANT AUTHENTICATION QUERY
         var user = await _userRepository.GetByEmailWithTenantAsync(loginDto.Email);
         
+        Console.WriteLine($"[AUTH DEBUG] User found: {user != null}, Email: {loginDto.Email}");
+        
         if (user == null)
         {
+            Console.WriteLine("[AUTH DEBUG] User not found in database");
             return new LoginResponseDto
             {
                 Success = false,
                 Error = "Invalid email or password"
             };
         }
+        
+        Console.WriteLine($"[AUTH DEBUG] User ID: {user.Id}, TenantID: {user.Tenant_id}, Tenant loaded: {user.Tenant != null}");
 
         // ✅ HANDLE LEGACY PASSWORDS (Migration Support)
         bool passwordValid = false;
@@ -68,26 +75,44 @@ public class AuthService : IAuthService
             await _userRepository.UpdateAsync(user);
         }
 
-        // ✅ TENANT STATUS VALIDATION - Prevent access to inactive tenants
-        if (user.Tenant?.Status != "active")
+        // ✅ TENANT VALIDATION - Ensure tenant data is loaded
+        if (user.Tenant == null)
         {
+            Console.WriteLine($"[AUTH DEBUG] Tenant is NULL for user {user.email}");
             return new LoginResponseDto
             {
                 Success = false,
-                Error = "Your organization's account is suspended"
+                Error = "User account configuration error - no tenant assigned"
+            };
+        }
+
+        Console.WriteLine($"[AUTH DEBUG] Tenant Status: '{user.Tenant.Status}', Plan: '{user.Tenant.Plan}'");
+
+        // ✅ TENANT STATUS VALIDATION - Prevent access to inactive tenants (case-insensitive)
+        var tenantStatus = user.Tenant.Status?.ToLowerInvariant() ?? "";
+        if (tenantStatus != "active")
+        {
+            Console.WriteLine($"[AUTH DEBUG] Login rejected - tenant status is '{user.Tenant.Status}', expected 'active'");
+            return new LoginResponseDto
+            {
+                Success = false,
+                Error = $"Your organization's account is {tenantStatus}. Please contact support."
             };
         }
 
         // ✅ SUBSCRIPTION VALIDATION - Prevent access to expired tenants
-        if (user.Tenant?.Subscription_expires_at.HasValue == true && 
+        if (user.Tenant.Subscription_expires_at.HasValue && 
             user.Tenant.Subscription_expires_at.Value < DateTime.Today)
         {
+            Console.WriteLine($"[AUTH DEBUG] Login rejected - subscription expired on {user.Tenant.Subscription_expires_at.Value}");
             return new LoginResponseDto
             {
                 Success = false,
                 Error = "Your organization's subscription has expired"
             };
         }
+
+        Console.WriteLine($"[AUTH DEBUG] All validations passed, generating token...");
 
 
         // ✅ SECURE JWT TOKEN GENERATION with tenant context
@@ -111,12 +136,15 @@ public class AuthService : IAuthService
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
         };
         var token = tokenHandler.CreateToken(tokenDescriptor);
+        var tokenString = tokenHandler.WriteToken(token);
+
+        Console.WriteLine($"[AUTH DEBUG] Token generated successfully. Length: {tokenString.Length}");
 
         // ✅ SECURE RESPONSE with complete user and tenant information
         return new LoginResponseDto
         {
             Success = true,
-            Token = tokenHandler.WriteToken(token),
+            Token = tokenString,
             User = new UserInfo
             {
                 Id = user.Id,

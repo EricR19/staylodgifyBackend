@@ -29,6 +29,7 @@ namespace BookingSite.API.Controllers
         }
 
         // GET: api/Properties
+        // ✅ PUBLIC: Accessible with public token (Booking Site) or user token (Admin)
         [HttpGet]
         [Authorize]
         public async Task<ActionResult<IEnumerable<PropertyDto>>> GetProperties()
