@@ -19,9 +19,18 @@ namespace BookingSite.Infrastructure.Repositories
 
         public async Task<Tenant?> GetByNameAsync(string name)
         {
+            // Normalize the search name for comparison
+            var normalizedSearch = name.ToLowerInvariant().Trim();
+            
+            // Also create a version with hyphens replaced by spaces for URL-friendly matching
+            var searchWithSpaces = normalizedSearch.Replace("-", " ");
+            
             return await _context.Tenants
                 .AsNoTracking()
-                .FirstOrDefaultAsync(t => t.Name == name);
+                .FirstOrDefaultAsync(t => 
+                    t.Name.ToLower() == normalizedSearch ||
+                    t.Name.ToLower() == searchWithSpaces ||
+                    t.Name.ToLower().Replace(" ", "-") == normalizedSearch);
         }
 
         public async Task<IEnumerable<Tenant>> GetByStatusAsync(string status)
