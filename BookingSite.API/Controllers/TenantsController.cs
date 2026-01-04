@@ -1,4 +1,3 @@
-using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
@@ -64,31 +63,12 @@ namespace BookingSite.API.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<TenantWithPropertiesDto>> GetTenantByName(string tenantName)
         {
-            try
-            {
-                Console.WriteLine($"[TENANTS] GetByName request for: '{tenantName}'");
-                
-                // URL decode the tenant name in case it comes encoded
-                var decodedName = System.Net.WebUtility.UrlDecode(tenantName);
-                Console.WriteLine($"[TENANTS] Decoded name: '{decodedName}'");
-                
-                var tenant = await _tenantService.GetByNameWithPropertiesAsync(decodedName);
-                
-                if (tenant == null)
-                {
-                    Console.WriteLine($"[TENANTS] Tenant not found for: '{decodedName}'");
-                    return NotFound(new { error = "Tenant not found", searchedName = decodedName });
-                }
+            var tenant = await _tenantService.GetByNameWithPropertiesAsync(tenantName);
+            
+            if (tenant == null)
+                return NotFound(new { error = "Tenant not found", searchedName = tenantName });
 
-                Console.WriteLine($"[TENANTS] Found tenant: ID={tenant.Id}, Name='{tenant.Name}'");
-                return Ok(tenant);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[TENANTS] Error in GetByName: {ex.Message}");
-                Console.WriteLine($"[TENANTS] Stack trace: {ex.StackTrace}");
-                return StatusCode(500, new { error = "Failed to get tenant", message = ex.Message });
-            }
+            return Ok(tenant);
         }
 
         // PUT: api/Tenants/me

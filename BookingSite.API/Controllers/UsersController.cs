@@ -96,22 +96,13 @@ namespace BookingSite.API.Controllers
         {
             try
             {
-                Console.WriteLine($"[USERS CONTROLLER] Login request received for: {loginDto.Email}");
-                
                 var result = await _authService.LoginAsync(loginDto);
                 
-                Console.WriteLine($"[USERS CONTROLLER] AuthService result: Success={result?.Success}, Error={result?.Error}");
-                
                 if (result == null || !result.Success)
-                {
-                    Console.WriteLine($"[USERS CONTROLLER] Login failed, returning 401");
                     return Unauthorized(new { success = false, error = result?.Error ?? "Invalid credentials" });
-                }
 
                 // ✅ SECURE: Set JWT as HttpOnly cookie - token NOT exposed to JavaScript
                 var isDevelopment = HttpContext.RequestServices.GetRequiredService<IWebHostEnvironment>().IsDevelopment();
-                
-                Console.WriteLine($"[USERS CONTROLLER] Setting auth cookie. IsDevelopment: {isDevelopment}");
                 
                 Response.Cookies.Append("jwt", result.Token, new CookieOptions
                 {
@@ -121,8 +112,6 @@ namespace BookingSite.API.Controllers
                     Expires = DateTimeOffset.UtcNow.AddDays(1),
                     Path = "/"
                 });
-
-                Console.WriteLine($"[USERS CONTROLLER] Cookie set successfully, returning response");
 
                 // ✅ SECURE: Return user info but NOT the token
                 return Ok(new { 
@@ -137,10 +126,8 @@ namespace BookingSite.API.Controllers
                     tenant = result.Tenant
                 });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Console.WriteLine($"[USERS CONTROLLER] Exception during login: {ex.Message}");
-                Console.WriteLine($"[USERS CONTROLLER] Stack trace: {ex.StackTrace}");
                 return StatusCode(500, new { success = false, error = "Authentication service error" });
             }
         }
