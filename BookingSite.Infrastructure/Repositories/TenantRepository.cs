@@ -19,18 +19,30 @@ namespace BookingSite.Infrastructure.Repositories
 
         public async Task<Tenant?> GetByNameAsync(string name)
         {
-            // Normalize the search name for comparison
-            var normalizedSearch = name.ToLowerInvariant().Trim();
-            
-            // Also create a version with hyphens replaced by spaces for URL-friendly matching
+            // Normalize the search name - replace hyphens with spaces for URL-friendly matching
+            var normalizedSearch = name.Trim();
             var searchWithSpaces = normalizedSearch.Replace("-", " ");
             
-            return await _context.Tenants
+            // First try exact match (case-insensitive in MySQL by default with utf8 collation)
+            var tenant = await _context.Tenants
                 .AsNoTracking()
-                .FirstOrDefaultAsync(t => 
-                    t.Name.ToLower() == normalizedSearch ||
-                    t.Name.ToLower() == searchWithSpaces ||
-                    t.Name.ToLower().Replace(" ", "-") == normalizedSearch);
+                .FirstOrDefaultAsync(t => t.Name == normalizedSearch);
+            
+            if (tenant != null) return tenant;
+            
+            // Try with hyphens replaced by spaces
+            tenant = await _context.Tenants
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.Name == searchWithSpaces);
+            
+            if (tenant != null) return tenant;
+            
+            // Try case-insensitive search using LIKE
+            tenant = await _context.Tenants
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => EF.Functions.Like(t.Name, searchWithSpaces));
+            
+            return tenant;
         }
 
         public async Task<IEnumerable<Tenant>> GetByStatusAsync(string status)

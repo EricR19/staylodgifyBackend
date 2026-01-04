@@ -172,10 +172,20 @@ app.Use(async (context, next) =>
     }
     catch (Exception ex)
     {
+        // ✅ ALWAYS log the full exception for debugging
+        Console.WriteLine($"❌ EXCEPTION TYPE: {ex.GetType().FullName}");
+        Console.WriteLine($"❌ MESSAGE: {ex.Message}");
+        Console.WriteLine($"❌ STACK TRACE: {ex.StackTrace}");
+        if (ex.InnerException != null)
+        {
+            Console.WriteLine($"❌ INNER EXCEPTION: {ex.InnerException.GetType().FullName}");
+            Console.WriteLine($"❌ INNER MESSAGE: {ex.InnerException.Message}");
+        }
+        
         context.Response.StatusCode = 500;
         context.Response.ContentType = "application/json";
         
-        // Don't expose internal errors in production
+        // In development, show the actual error
         var errorMessage = app.Environment.IsDevelopment() 
             ? ex.Message 
             : "An internal error occurred";
