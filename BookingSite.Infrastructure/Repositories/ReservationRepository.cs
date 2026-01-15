@@ -39,7 +39,7 @@ namespace BookingSite.Infrastructure.Repositories
             return await _context.Reservations
                 .Include(r => r.Guest)
                 .AsNoTracking()
-                .Where(r => r.Room_Id == roomId)
+                .Where(r => r.Room_Id == roomId && r.Status != "cancelled")
                 .ToListAsync();
         }
 
