@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using BookingSite.Domain.Entities;
@@ -129,6 +129,13 @@ namespace BookingSite.Infrastructure.Context
                 entity.Property(e => e.Phone).HasColumnName("phone");
                 entity.Property(e => e.Main_Image).HasColumnName("main_image");
                 entity.Property(e => e.Other_Images).HasColumnName("other_images");
+                
+                // Nuevos campos para amenidades y reglas
+                entity.Property(e => e.Amenities).HasColumnName("amenities").HasColumnType("json");
+                entity.Property(e => e.Check_In_Time).HasColumnName("check_in_time").HasColumnType("time");
+                entity.Property(e => e.Check_Out_Time).HasColumnName("check_out_time").HasColumnType("time");
+                entity.Property(e => e.House_Rules).HasColumnName("house_rules").HasColumnType("json");
+                
                 entity.Property(e => e.Created_At).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                 entity.HasOne(e => e.Tenant)
