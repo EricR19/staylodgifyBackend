@@ -84,6 +84,16 @@ namespace BookingSite.Application.Services
             if (property == null || property.Tenant_Id != tenantId)
                 return false;
 
+            Console.WriteLine($"🔧 [PropertyService.UpdateAsync] Property ID: {id}");
+            Console.WriteLine($"   DTO.Name: {dto.Name}");
+            Console.WriteLine($"   DTO.HouseRules: {(dto.HouseRules != null ? "NOT NULL" : "NULL")}");
+            
+            if (dto.HouseRules != null)
+            {
+                Console.WriteLine($"   HouseRules.ImportantInfo: {(dto.HouseRules.ImportantInfo != null ? $"[{dto.HouseRules.ImportantInfo.Count} items]" : "null")}");
+                Console.WriteLine($"   HouseRules.CustomNotes: {dto.HouseRules.CustomNotes ?? "null"}");
+            }
+
             property.Name = dto.Name;
             property.Description = dto.Description;
             property.Address = dto.Address;
@@ -100,12 +110,19 @@ namespace BookingSite.Application.Services
             if (dto.HouseRules != null)
             {
                 // Si se envía un objeto HouseRules, serializarlo
-                property.House_Rules = JsonSerializer.Serialize(dto.HouseRules);
+                var serialized = JsonSerializer.Serialize(dto.HouseRules);
+                Console.WriteLine($"   ✅ HouseRules serialized: {serialized}");
+                property.House_Rules = serialized;
+            }
+            else
+            {
+                Console.WriteLine($"   ⚠️ HouseRules is null, keeping existing: {property.House_Rules ?? "NULL"}");
             }
             // Si no se envía HouseRules en el DTO, mantener el valor existente
             // Para limpiar HouseRules, enviar un objeto vacío { importantInfo: null, customNotes: null }
 
             await _propertyRepository.UpdateAsync(property);
+            Console.WriteLine($"   💾 Property updated in database");
             return true;
         }
 
