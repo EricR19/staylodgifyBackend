@@ -49,7 +49,7 @@ namespace BookingSite.API.Controllers
             {
                 new Claim("tenant_id", tenant.Id.ToString()),
                 new Claim("public_access", "true"),
-                new Claim("scope", "public_booking") // Limited scope for public access
+                new Claim("scope", "public_booking")
             };
 
             var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]);
@@ -65,12 +65,13 @@ namespace BookingSite.API.Controllers
             var token = tokenHandler.CreateToken(tokenDescriptor);
             var tokenString = tokenHandler.WriteToken(token);
 
-            // ✅ SECURE: Set HttpOnly cookie for public access too
+            // ✅ SECURE: Set HttpOnly cookie for browsers that support it
             SetAuthCookie(tokenString, TimeSpan.FromHours(1));
 
-            // Return only tenant info, NOT the token
+            // ✅ FALLBACK: Return token in body for mobile browsers that reject HttpOnly cookies
             return Ok(new { 
-                success = true, 
+                success = true,
+                token = tokenString,  // Mobile fallback
                 tenant = new { id = tenant.Id, name = tenant.Name }
             });
         }
@@ -94,13 +95,14 @@ namespace BookingSite.API.Controllers
                     });
                 }
 
-                // ✅ SECURE: Set HttpOnly cookie - token NEVER exposed to JavaScript
+                // ✅ SECURE: Set HttpOnly cookie for browsers that support it
                 SetAuthCookie(result.Token, TimeSpan.FromDays(1));
 
-                // ✅ SECURE: Return user/tenant info but NOT the token
+                // ✅ FALLBACK: Return token in body for mobile browsers that reject HttpOnly cookies
                 return Ok(new SecureLoginResponse
                 {
                     Success = true,
+                    Token = result.Token,  // Mobile fallback
                     User = result.User,
                     Tenant = result.Tenant
                 });
@@ -230,11 +232,13 @@ namespace BookingSite.API.Controllers
     }
 
     /// <summary>
-    /// Secure login response - does NOT include token
+    /// <summary>
+    /// Secure login response - includes token as fallback for mobile browsers
     /// </summary>
     public class SecureLoginResponse
     {
         public bool Success { get; set; }
+        public string Token { get; set; }  // ✅ Fallback for mobile browsers that reject HttpOnly cookies
         public UserInfo User { get; set; }
         public TenantInfo Tenant { get; set; }
     }
