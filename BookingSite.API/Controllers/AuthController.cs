@@ -121,13 +121,14 @@ namespace BookingSite.API.Controllers
         [Authorize]
         public IActionResult Logout()
         {
-            // Clear the auth cookie
+            // Clear the auth cookie with matching options
             Response.Cookies.Delete("jwt", new CookieOptions
             {
                 HttpOnly = true,
-                Secure = !_environment.IsDevelopment(),
-                SameSite = _environment.IsDevelopment() ? SameSiteMode.Lax : SameSiteMode.None,
-                Path = "/"
+                Secure = true,
+                SameSite = SameSiteMode.None,
+                Path = "/",
+                Domain = ".staylodgify.lat"  // ✅ Match SetAuthCookie domain
             });
 
             return Ok(new { success = true, message = "Logged out successfully" });
@@ -209,16 +210,18 @@ namespace BookingSite.API.Controllers
 
         /// <summary>
         /// Helper method to set secure auth cookie with proper settings
+        /// ✅ FIXED: Added Domain attribute for iOS Safari cross-site support
         /// </summary>
         private void SetAuthCookie(string token, TimeSpan expiration)
         {
             var cookieOptions = new CookieOptions
             {
-                HttpOnly = true,  // ✅ CRITICAL: Not accessible via JavaScript
-                Secure = !_environment.IsDevelopment(), // HTTPS only in production
-                SameSite = _environment.IsDevelopment() ? SameSiteMode.Lax : SameSiteMode.None,
+                HttpOnly = true,                    // ✅ Not accessible via JavaScript
+                Secure = true,                      // ✅ HTTPS only (always true in production)
+                SameSite = SameSiteMode.None,       // ✅ Allow cross-site (required with Domain + Secure)
                 Expires = DateTime.UtcNow.Add(expiration),
                 Path = "/",
+                Domain = ".staylodgify.lat",        // ✅ CRITICAL FIX: Enables cross-site cookies on iOS
                 IsEssential = true
             };
 
