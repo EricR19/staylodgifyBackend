@@ -126,9 +126,8 @@ namespace BookingSite.API.Controllers
             {
                 HttpOnly = true,
                 Secure = true,
-                SameSite = SameSiteMode.Lax,
+                SameSite = SameSiteMode.None,   // ✅ Match SetAuthCookie
                 Path = "/"
-                // NO Domain attribute - matches SetAuthCookie
             });
 
             return Ok(new { success = true, message = "Logged out successfully" });
@@ -217,11 +216,11 @@ namespace BookingSite.API.Controllers
             var cookieOptions = new CookieOptions
             {
                 HttpOnly = true,                    // ✅ Not accessible via JavaScript
-                Secure = true,                      // ✅ HTTPS only (always true in production)
-                SameSite = SameSiteMode.Lax,        // ✅ Changed from None to Lax for cross-domain cookies
+                Secure = true,                      // ✅ HTTPS only
+                SameSite = SameSiteMode.None,       // ✅ CRITICAL: Allows cross-origin cookies (frontend ≠ backend domain)
                 Expires = DateTime.UtcNow.Add(expiration),
                 Path = "/",
-                // ✅ NO Domain attribute - allows cookies to be sent from different domains
+                // ✅ NO Domain attribute - browser handles it
                 // This fixes: Frontend on staylodgify.lat, Backend on onrender.com
                 IsEssential = true
             };
