@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using BookingSite.Application.DTOs;
@@ -74,10 +75,24 @@ namespace BookingSite.API.Controllers
         // PUT: api/Properties/5
         [HttpPut("{id}")]
         [Authorize]
-        public async Task<IActionResult> PutProperty(int id, PropertyCreateDto dto)
+        public async Task<IActionResult> PutProperty(int id, [FromBody] PropertyCreateDto dto)
         {
+            // Validar que el ModelState sea válido
+            if (!ModelState.IsValid)
+            {
+                Console.WriteLine($"❌ [PUT Property] ModelState Invalid:");
+                foreach (var error in ModelState)
+                {
+                    Console.WriteLine($"   Key: {error.Key}, Errors: {string.Join(", ", error.Value.Errors.Select(e => e.ErrorMessage))}");
+                }
+                return BadRequest(new { 
+                    error = "Validation failed", 
+                    details = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList() 
+                });
+            }
+
             if (id != dto.Id)
-                return BadRequest();
+                return BadRequest(new { error = "ID mismatch", message = $"URL id ({id}) does not match body id ({dto.Id})" });
 
             try
             {
@@ -85,14 +100,25 @@ namespace BookingSite.API.Controllers
                 if (tenantId == null)
                     return Unauthorized();
 
+                // Log para debugging
+                Console.WriteLine($"✅ [PUT Property] ID: {id}, Name: {dto.Name}");
+                Console.WriteLine($"   HouseRules: {(dto.HouseRules != null ? "Present" : "Null")}");
+                if (dto.HouseRules != null)
+                {
+                    Console.WriteLine($"   HouseRules.ImportantInfo: {(dto.HouseRules.ImportantInfo != null ? $"Count={dto.HouseRules.ImportantInfo.Count}" : "null")}");
+                    Console.WriteLine($"   HouseRules.CustomNotes: {dto.HouseRules.CustomNotes ?? "null"}");
+                }
+
                 var updated = await _propertyService.UpdateAsync(id, dto, tenantId.Value);
                 if (!updated)
-                    return NotFound();
+                    return NotFound(new { error = "Property not found or unauthorized" });
                 return NoContent();
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
+                Console.WriteLine($"❌ [PUT Property Error]: {ex.Message}");
+                Console.WriteLine($"❌ [Stack]: {ex.StackTrace}");
+                return StatusCode(500, new { error = "Internal server error", message = ex.Message, details = ex.InnerException?.Message });
             }
         }
 

@@ -95,7 +95,15 @@ namespace BookingSite.Application.Services
                 ? TimeSpan.Parse(dto.CheckInTime) : property.Check_In_Time;
             property.Check_Out_Time = !string.IsNullOrEmpty(dto.CheckOutTime) 
                 ? TimeSpan.Parse(dto.CheckOutTime) : property.Check_Out_Time;
-            property.House_Rules = dto.HouseRules != null ? JsonSerializer.Serialize(dto.HouseRules) : property.House_Rules;
+            
+            // Manejo especial para HouseRules: permitir actualización a null
+            if (dto.HouseRules != null)
+            {
+                // Si se envía un objeto HouseRules, serializarlo
+                property.House_Rules = JsonSerializer.Serialize(dto.HouseRules);
+            }
+            // Si no se envía HouseRules en el DTO, mantener el valor existente
+            // Para limpiar HouseRules, enviar un objeto vacío { importantInfo: null, customNotes: null }
 
             await _propertyRepository.UpdateAsync(property);
             return true;

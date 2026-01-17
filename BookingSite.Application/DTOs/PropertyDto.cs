@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace BookingSite.Application.DTOs
 {
     public class PropertyDto
@@ -20,7 +22,11 @@ namespace BookingSite.Application.DTOs
     
     public class PropertyHouseRulesDto
     {
+        [JsonPropertyName("importantInfo")]
         public List<string>? ImportantInfo { get; set; }
+        
+        [JsonPropertyName("customNotes")]
         public string? CustomNotes { get; set; }
     }
 }
+
